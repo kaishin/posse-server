@@ -1,0 +1,30 @@
+{
+  "name": "widegamut-syndicator",
+  "version": "1.0.1",
+  "description": "Syndicate new posts from Widegamut",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.15.3",
+    "body-parser": "^1.18.3",
+    "axios": "^0.19.0",
+    "airtable": "^0.5.0",
+    "mastodon": "^1.2.2",
+    "twitter": "^1.7.1"
+  },
+  "engines": {
+    "node": "10.0.0"
+  },
+  "repository": {
+    "url": "https://glitch.com/edit/#!/widegamut-syndicator"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "glitch",
+    "express",
+    "twitch.tv"
+  ]
+}
