@@ -1,3 +1,3 @@
-# WideGamut Syndicator
+# RSS Syndicator
 
-A bot that syndicate all WideGamut posts to Twitter and Mastodon.
+Provides a REST API to syndicate certain RSS feeds to Twitter and Mastodon.
