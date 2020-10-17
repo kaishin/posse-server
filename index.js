@@ -1,98 +1,120 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const app = express();
-const axios = require('axios');
-const dotenv = require('dotenv');
+import Pipeline from './src/pipeline.js';
+import Express from 'express';
+import BodyParser from 'body-parser';
+import Dotenv from 'dotenv';
+import axios from 'axios';
+import util from 'util';
 
-dotenv.config();
+Dotenv.config()
 
-// Airtable
-const airtable = require('airtable');
+const app = Express();
 
-var base = new airtable({
-  apiKey: process.env.AIRTABLE_API_KEY,
-}).base(process.env.AIRTABLE_BASE_ID);
-var tableName = 'Latest';
-
-// Twitter
-var twitter = require('twitter');
-
-var twitterClient = new twitter({
-  consumer_key: process.env.TWITTER_CONSUMER_KEY,
-  consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
-  access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY,
-  access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
-});
-
-// Express
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(BodyParser.urlencoded({ extended: false }));
+app.use(BodyParser.json());
 
 app.use(function(req, res, next) {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
   next();
-});
+});;
 
 let listener = app.listen(process.env.PORT, function() {
   console.log('Your app is listening on port ' + listener.address().port);
 });
 
 app.post('/', function(req, res) {
-  res.send("{ 'success': true }");
-
-  axios
-    .get('https://swiftuidir.redalemeden.com/feed.json')
-    .then((response) => {
-      resolveLatestPost(response.data);
-    })
-    .catch((error) => {
-      console.log(error);
-    });
+  res.send("{ 'message': 'Use /widegamut or /swiftuidir routes.' }");
 });
 
-// Functions
-function resolveLatestPost(data) {
+app.post('/widegamut', function(req, res) {
+  var pipeline = new Pipeline('WIDEGAMUT', true, true)
+  processRequest(pipeline, req, res)
+});
+
+app.post('/swiftuidir', function(req, res) {
+  var pipeline = new Pipeline('SWIFTUIDIR', true, false)
+  processRequest(pipeline, req, res)
+});
+
+let processRequest = async (pipeline, req, res) => {
+  console.log(req.headers)
+
+  if (req.headers["secret-key"] != process.env.SECRET_KEY) {
+    res.status(401).send({ error: "Unauthorized"})
+  } else {
+    axios.get(pipeline.feedURL)
+      .then(response => verifyItem(response.data, pipeline))
+      .then(item => syndicateItem(item, pipeline))
+      .then(item => cacheItem(item, pipeline))
+      .then(item => res.send({ sucess: item.id }))
+      .catch(error => res.status(500).send({ error: error }))
+  }
+}
+
+let verifyItem = async (data, pipeline) => {
   let items = data.items;
   let latestItem = items[0];
-  let latestItemID = latestItem.id;
 
-  base(tableName).find(process.env.AIRTABLE_RECORD_ID, function(err, record) {
-    if (err) {
-      console.error(err);
-      return;
-    }
-
-    if (record.fields.ID == latestItemID) {
-      console.log('No new library detected. The last library is ' + latestItem.id);
-    } else {
-      base(tableName).update(process.env.AIRTABLE_RECORD_ID, { ID: latestItemID }, function(err, record) {
-        if (err) {
-          console.error(err);
-          return;
-        }
-        console.log('Library cached successfully: ' + latestItemID);
-        syndicate(latestItem);
-      });
-    }
-  });
+  const record = await pipeline.airtable(pipeline.airtableConfig.tableName)
+  .find(pipeline.airtableConfig.recordID)
+  
+  if (record.fields.ID == latestItem.id) {
+    throw `No new content since ${latestItem.id}`
+  } else {
+    return latestItem
+  }
 }
 
-function syndicate(library) {
-  twitterClient.post('statuses/update', { status: postText(library) }, function(error, tweet, response) {
-    // if(error) throw error;
-    if (error) {
-      console.error(error);
-      return;
-    }
-    console.log('Tweet successful: https://twitter.com/swiftuidir/status/' + tweet['id_str']);
-  });
+let syndicateItem = async (item, pipeline) => {
+  let postBody = pipeline.keyword == 'WIDEGAMUT' ? widegamut(item) : swiftUIDir(item)
+
+  if (pipeline.toot) {
+    await pipeline.masto.post("statuses", { status: postBody })
+  }
+
+  if (item.image !== undefined && item.image != "") {
+   await axios.get(post.image, { responseType: 'arraybuffer' })
+    .then(response => pipeline.twitter.post("media/upload", { media: response.data}))
+    .then(media => pipeline.twitter.post("statuses/update", { status: postBody, media_ids: media.media_id_string }))
+  } else {
+    await pipeline.twitter.post("statuses/update", { status: postBody })
+  }
+
+  return item
 }
 
-function postText(library) {
-  // let tags = library.tags.length > 0 ? " " + library.tags.map(function(e) { return '#' + e }).join(' ') : ""
-  let authorTwitter = library.metadata.authorTwitter ? ' by @' + library.metadata.authorTwitter : '';
-  return (
-    library.title + authorTwitter + ': ' + library.content_html.replace(/\r?\n|\r/gm, '') + ' #SwiftUI\n' + library.url
-  );
+let cacheItem = async (item, pipeline) => {
+  await pipeline.airtable(pipeline.airtableConfig.tableName)
+    .update(pipeline.airtableConfig.recordID, { ID: item.id })
+
+  return item.id
+}
+
+function widegamut(post) {
+  let text;
+
+  if (post.excerpt !== undefined && post.excerpt != "") {
+    text = post.excerpt;
+  } else {
+    text = "New micro-post:[...]";
+  }
+  
+  if (text.includes("[...]")) {
+    return text.replace("[...]", "\n" + post.id)
+  } else {
+    return text
+  }
+}
+
+function swiftUIDir(library) {
+  let authorTwitter = library.metadata.authorTwitter ? 
+  ' by @' + 
+  library.metadata.authorTwitter : '';
+
+  return `${library.title}
+  ${authorTwitter}: ${library.content_html.replace(/\r?\n|\r/gm, '')} #SwiftUI\n
+  ${library.url}`
 }
