@@ -1,7 +1,7 @@
 version: "3.7"
 
 services:
-  rss-syndicator:
+  posse-app:
     image: posse:latest
     build: ./
     container_name: posse
