@@ -1,4 +1,4 @@
-import Pipeline from './src/pipeline.js';
+import Pipeline from './pipeline.js';
 import Express from 'express';
 import BodyParser from 'body-parser';
 import Dotenv from 'dotenv';
@@ -42,7 +42,7 @@ app.post('/swiftuidir', function(req, res) {
 let processRequest = async (pipeline, req, res) => {
   console.log(req.headers)
 
-  if (req.headers["secret-key"] != process.env.SECRET_KEY) {
+  if (req.headers["x-webhook-signature"] === undefined) {
     res.status(401).send({ error: "Unauthorized"})
   } else {
     axios.get(pipeline.feedURL)
