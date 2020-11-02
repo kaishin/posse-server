@@ -40,6 +40,8 @@ app.post('/swiftuidir', function(req, res) {
 });
 
 let processRequest = async (pipeline, req, res) => {
+  console.log(new Date())
+  console.log(req.hostname)
   console.log(req.headers)
 
   axios.get(pipeline.feedURL)
