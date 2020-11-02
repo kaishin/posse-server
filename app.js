@@ -42,16 +42,12 @@ app.post('/swiftuidir', function(req, res) {
 let processRequest = async (pipeline, req, res) => {
   console.log(req.headers)
 
-  if (req.headers["x-webhook-signature"] === undefined) {
-    res.status(401).send({ error: "Unauthorized"})
-  } else {
-    axios.get(pipeline.feedURL)
-      .then(response => verifyItem(response.data, pipeline))
-      .then(item => syndicateItem(item, pipeline))
-      .then(item => cacheItem(item, pipeline))
-      .then(item => res.send({ sucess: item.id }))
-      .catch(error => res.status(500).send({ error: error }))
-  }
+  axios.get(pipeline.feedURL)
+    .then(response => verifyItem(response.data, pipeline))
+    .then(item => syndicateItem(item, pipeline))
+    .then(item => cacheItem(item, pipeline))
+    .then(item => res.send({ sucess: item.id }))
+    .catch(error => res.status(500).send({ error: error }))
 }
 
 let verifyItem = async (data, pipeline) => {
