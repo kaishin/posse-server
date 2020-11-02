@@ -8,8 +8,13 @@ services:
     ports:
       - 3000:3000
     environment:
-      - VIRTUAL_HOST
-      - VIRTUAL_PORT
-      - LETSENCRYPT_HOST
-      - LETSENCRYPT_EMAIL
+      VIRTUAL_HOST: posse.redalemeden.com
+      VIRTUAL_PORT: 3000
+      LETSENCRYPT_HOST: posse.redalemeden.com
+      LETSENCRYPT_EMAIL: letsencrypt@reda.fastmail.com
     restart: unless-stopped
+
+networks:
+  default:
+    external:
+      name: nginx-proxy
