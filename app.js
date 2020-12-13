@@ -48,8 +48,19 @@ let processRequest = async (pipeline, req, res) => {
     .then(response => verifyItem(response.data, pipeline))
     .then(item => syndicateItem(item, pipeline))
     .then(item => cacheItem(item, pipeline))
-    .then(item => res.send({ sucess: item.id }))
-    .catch(error => res.status(500).send({ error: error }))
+    .then(item => { 
+      console.log(`Successfully syndicated ${item.id}!`)
+      res.send({ sucess: item.id }) 
+    })
+    .catch(error => {
+      console.log(`An error occured. ${error}`)
+
+      if (error.includes("Error 7002")) {
+        res.status(304).send({ error: error })
+      } else {
+        res.status(500).send({ error: error })
+      }
+    })
 }
 
 let verifyItem = async (data, pipeline) => {
