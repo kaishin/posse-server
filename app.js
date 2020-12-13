@@ -30,18 +30,17 @@ app.post('/', function(req, res) {
 });
 
 app.post('/widegamut', function(req, res) {
-  var pipeline = new Pipeline('WIDEGAMUT', true, true)
+  var pipeline = new Pipeline('WIDEGAMUT', true, true, req.query.test)
   processRequest(pipeline, req, res)
 });
 
 app.post('/swiftuidir', function(req, res) {
-  var pipeline = new Pipeline('SWIFTUIDIR', true, false)
+  var pipeline = new Pipeline('SWIFTUIDIR', true, false, req.query.test)
   processRequest(pipeline, req, res)
 });
 
 let processRequest = async (pipeline, req, res) => {
-  console.log(new Date())
-  console.log(req.hostname)
+  console.log("Requested at:" + new Date())
   console.log(req.headers)
 
   axios.get(pipeline.feedURL)
@@ -49,8 +48,8 @@ let processRequest = async (pipeline, req, res) => {
     .then(item => syndicateItem(item, pipeline))
     .then(item => cacheItem(item, pipeline))
     .then(item => { 
-      console.log(`Successfully syndicated ${item.id}!`)
-      res.send({ sucess: item.id }) 
+      console.log(`Successfully syndicated ${item.id}`)
+      res.send({ success: item.id }) 
     })
     .catch(error => {
       console.log(`An error occured. ${error}`)
@@ -80,6 +79,11 @@ let verifyItem = async (data, pipeline) => {
 let syndicateItem = async (item, pipeline) => {
   let postBody = pipeline.keyword == 'WIDEGAMUT' ? widegamut(item) : swiftUIDir(item)
 
+  if (pipeline.test) {
+    console.log("\nPost body: " + postBody + "\n")
+    return item
+  }
+
   if (pipeline.toot) {
     await pipeline.masto.post("statuses", { status: postBody })
   }
@@ -99,23 +103,21 @@ let cacheItem = async (item, pipeline) => {
   await pipeline.airtable(pipeline.airtableConfig.tableName)
     .update(pipeline.airtableConfig.recordID, { ID: item.id })
 
-  return item.id
+  return item
 }
 
 function widegamut(post) {
   let text;
 
-  if (post.excerpt !== undefined && post.excerpt != "") {
-    text = post.excerpt;
+  if (post.title !== undefined && post.title != "") {
+    text = `"${post.excerpt}"[...]`;
+  } else if (post.excerpt !== undefined && post.excerpt != "") {
+    text = `${post.excerpt}[...]`;
   } else {
-    text = "New micro-post:[...]";
+    text = "New micro-post 👇[...]";
   }
-  
-  if (text.includes("[...]")) {
-    return text.replace("[...]", "\n" + post.id)
-  } else {
-    return text
-  }
+
+  return text.replace("[...]", "\n" + post.id)
 }
 
 function swiftUIDir(library) {

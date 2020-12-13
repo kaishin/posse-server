@@ -3,11 +3,12 @@ import Twitter from 'twitter';
 import Masto from 'mastodon';
 
 export default class Pipeline {
-  constructor(keyword, tweet, toot) {
+  constructor(keyword, tweet, toot, test) {
     this.keyword = keyword
     this.tweet = tweet
     this.toot = toot
     this.feedURL = process.env[`${keyword}_FEED_URL`]
+    this.test = test
 
     this.twitterConfig = new TwitterConfig(
       process.env[`${keyword}_TWITTER_CONSUMER_KEY`],
