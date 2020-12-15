@@ -40,7 +40,7 @@ app.post('/swiftuidir', function(req, res) {
 });
 
 let processRequest = async (pipeline, req, res) => {
-  console.log("Requested at:" + new Date())
+  console.log("Requested at: " + new Date())
   console.log(req.headers)
 
   axios.get(pipeline.feedURL)
@@ -70,7 +70,7 @@ let verifyItem = async (data, pipeline) => {
   .find(pipeline.airtableConfig.recordID)
   
   if (record.fields.ID == latestItem.id) {
-    throw `No new content since ${latestItem.id}`
+    throw `Error 7002. No new content since ${latestItem.id}`
   } else {
     return latestItem
   }
@@ -100,6 +100,8 @@ let syndicateItem = async (item, pipeline) => {
 }
 
 let cacheItem = async (item, pipeline) => {
+  if (pipeline.test) { return item }
+
   await pipeline.airtable(pipeline.airtableConfig.tableName)
     .update(pipeline.airtableConfig.recordID, { ID: item.id })
 
