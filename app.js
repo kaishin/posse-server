@@ -19,7 +19,7 @@ app.use(function(req, res, next) {
     "Origin, X-Requested-With, Content-Type, Accept"
   );
   next();
-});;
+});
 
 let listener = app.listen(process.env.PORT, function() {
   console.log('Your app is listening on port ' + listener.address().port);
@@ -55,7 +55,7 @@ let processRequest = async (pipeline, req, res) => {
       console.log(`An error occured. ${error}`)
 
       if (error.includes("Error 7002")) {
-        res.status(304).send({ error: error })
+        res.status(200).send("No new posts to syndicate.")
       } else {
         res.status(500).send({ error: error })
       }
@@ -89,9 +89,13 @@ let syndicateItem = async (item, pipeline) => {
   }
 
   if (item.image !== undefined && item.image != "") {
-   await axios.get(post.image, { responseType: 'arraybuffer' })
+   console.log("Downloading image: " + item.image + "...")
+   await axios.get(item.image, { responseType: 'arraybuffer' })
     .then(response => pipeline.twitter.post("media/upload", { media: response.data}))
     .then(media => pipeline.twitter.post("statuses/update", { status: postBody, media_ids: media.media_id_string }))
+    .catch(error => {
+      console.log(`An image upload error occured. ${error}`)
+    })
   } else {
     await pipeline.twitter.post("statuses/update", { status: postBody })
   }
