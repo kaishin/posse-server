@@ -1,16 +1,14 @@
 import Pipeline from './pipeline.js';
 import Express from 'express';
-import BodyParser from 'body-parser';
 import Dotenv from 'dotenv';
 import axios from 'axios';
-import util from 'util';
 
 Dotenv.config()
 
 const app = Express();
 
-app.use(BodyParser.urlencoded({ extended: false }));
-app.use(BodyParser.json());
+app.use(express.urlencoded({extended: true}));
+app.use(express.json());
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
