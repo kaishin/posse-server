@@ -7,8 +7,8 @@ Dotenv.config()
 
 const app = Express();
 
-app.use(express.urlencoded({extended: true}));
-app.use(express.json());
+app.use(Express.urlencoded({extended: true}));
+app.use(Express.json());
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -28,7 +28,7 @@ app.post('/', function(req, res) {
 });
 
 app.post('/widegamut', function(req, res) {
-  var pipeline = new Pipeline('WIDEGAMUT', true, true, req.query.test)
+  var pipeline = new Pipeline('WIDEGAMUT', false, true, req.query.test)
   processRequest(pipeline, req, res)
 });
 
@@ -37,9 +37,38 @@ app.post('/swiftuidir', function(req, res) {
   processRequest(pipeline, req, res)
 });
 
+app.post('/unredacted', function(req, res) {
+  var pipeline = new Pipeline('UNREDACTED', true, false, req.query.test)
+  processRequest(pipeline, req, res)
+})
+
 let processRequest = async (pipeline, req, res) => {
   console.log("Requested at: " + new Date())
   console.log(req.headers)
+ 
+  if (pipeline.test) {
+    axios.get(pipeline.feedURL)
+    .then(response => {
+      let item = response.data.items[2]
+      var postBody
+
+      switch (pipeline.keyword) {
+        case 'WIDEGAMUT':
+          postBody = widegamut(item)
+          break
+        case 'UNREDACTED':
+          postBody = unredacted(item)
+          break
+        case 'SWIFTUIDIR':
+          postBody = swiftUIDir(item)
+          break
+      }
+      
+      res.send({ dry: postBody }) 
+    })
+
+    return
+  } 
 
   axios.get(pipeline.feedURL)
     .then(response => verifyItem(response.data, pipeline))
@@ -50,13 +79,7 @@ let processRequest = async (pipeline, req, res) => {
       res.send({ success: item.id }) 
     })
     .catch(error => {
-      console.log(`An error occured. ${error}`)
-
-      if (error.includes("Error 7002")) {
-        res.status(200).send("No new posts to syndicate.")
-      } else {
-        res.status(500).send({ error: error })
-      }
+      res.status(200).send({ error: error })
     })
 }
 
@@ -75,7 +98,19 @@ let verifyItem = async (data, pipeline) => {
 }
 
 let syndicateItem = async (item, pipeline) => {
-  let postBody = pipeline.keyword == 'WIDEGAMUT' ? widegamut(item) : swiftUIDir(item)
+  var postBody
+
+  switch (pipeline.keyword) {
+    case 'WIDEGAMUT':
+      postBody = widegamut(item)
+      break
+    case 'UNREDACTED':
+      postBody = unredacted(item)
+      break
+    case 'SWIFTUIDIR':
+      postBody = swiftUIDir(item)
+      break
+  }
 
   if (pipeline.test) {
     console.log("\nPost body: " + postBody + "\n")
@@ -86,16 +121,23 @@ let syndicateItem = async (item, pipeline) => {
     await pipeline.masto.post("statuses", { status: postBody })
   }
 
-  if (item.image !== undefined && item.image != "") {
-   console.log("Downloading image: " + item.image + "...")
-   await axios.get(item.image, { responseType: 'arraybuffer' })
-    .then(response => pipeline.twitter.post("media/upload", { media: response.data}))
-    .then(media => pipeline.twitter.post("statuses/update", { status: postBody, media_ids: media.media_id_string }))
-    .catch(error => {
-      console.log(`An image upload error occured. ${error}`)
-    })
-  } else {
-    await pipeline.twitter.post("statuses/update", { status: postBody })
+  if (pipeline.tweet) {
+    if (item.image !== undefined && item.image != "") {
+      console.log("Downloading image: " + item.image + "...")
+      await axios.get(item.image, { responseType: 'arraybuffer' })
+       .then(response => pipeline.twitter.post("media/upload", { media: response.data}))
+       .then(media => pipeline.twitter.post("statuses/update", { status: postBody, media_ids: media.media_id_string }))
+       .catch(error => {
+         console.log(`An image upload error occured. ${error}`)
+       })
+     } else {
+       await pipeline.twitter.post("statuses/update", { status: postBody })
+       .catch(error => {
+         console.log("❗️ Twitter Error ❗️")
+         console.error(error)
+         throw 'Something went wrong posting to Twitter'
+       })
+     }
   }
 
   return item
@@ -114,14 +156,16 @@ function widegamut(post) {
   let text;
 
   if (post.title !== undefined && post.title != "") {
-    text = `"${post.excerpt}"[...]`;
-  } else if (post.excerpt !== undefined && post.excerpt != "") {
-    text = `${post.excerpt}[...]`;
+    text = post.title + "\n" + post.id;
   } else {
-    text = "New micro-post 👇[...]";
+    text = post.excerpt + "\nRead more: " + post.id;
   }
 
-  return text.replace("[...]", "\n" + post.id)
+  return text
+}
+
+function unredacted(post) {
+  return post.title + "\n" + post.url;
 }
 
 function swiftUIDir(library) {

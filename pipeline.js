@@ -10,19 +10,16 @@ export default class Pipeline {
     this.feedURL = process.env[`${keyword}_FEED_URL`]
     this.test = test
 
-    this.twitterConfig = new TwitterConfig(
-      process.env[`${keyword}_TWITTER_CONSUMER_KEY`],
-      process.env[`${keyword}_TWITTER_CONSUMER_SECRET`],
-      process.env[`${keyword}_TWITTER_ACCESS_TOKEN_KEY`],
-      process.env[`${keyword}_TWITTER_ACCESS_TOKEN_SECRET`],
-      process.env[`${keyword}_TWITTER_USERNAME`]
-    )
-
     this.airtableConfig = new AirtableConfig(
       'Latest',
       process.env[`${keyword}_AIRTABLE_BASE_ID`],
       process.env[`${keyword}_AIRTABLE_RECORD_ID`]
     )
+
+    this.airtable = new Airtable({
+      apiKey: process.env.AIRTABLE_API_KEY,
+    })
+    .base(this.airtableConfig.baseID)
 
     if (toot) {
       this.mastoToken = process.env[`${keyword}_MASTO_ACCESS_TOKEN`]
@@ -34,17 +31,14 @@ export default class Pipeline {
       });
     }
 
-    this.airtable = new Airtable({
-      apiKey: process.env.AIRTABLE_API_KEY,
-    })
-    .base(this.airtableConfig.baseID)
-
-    this.twitter = new Twitter({
-      consumer_key: this.twitterConfig.consumerKey,
-      consumer_secret: this.twitterConfig.consumerSecret,
-      access_token_key: this.twitterConfig.accessTokenKey,
-      access_token_secret: this.twitterConfig.accessTokenSecret
-    })
+    if (tweet) {
+      this.twitter = new Twitter({
+        consumer_key: process.env[`${keyword}_TWITTER_CONSUMER_KEY`],
+        consumer_secret: process.env[`${keyword}_TWITTER_CONSUMER_SECRET`],
+        access_token_key: process.env[`${keyword}_TWITTER_ACCESS_TOKEN_KEY`],
+        access_token_secret: process.env[`${keyword}_TWITTER_ACCESS_TOKEN_SECRET`]
+      })
+    }
   }
 }
 
@@ -57,21 +51,5 @@ class AirtableConfig {
     this.tableName = tableName
     this.baseID = baseID
     this.recordID = recordID
-  }
-}
-
-class TwitterConfig {
-  constructor(
-    consumerKey,
-    consumerSecret,
-    accessTokenKey,
-    accessTokenSecret,
-    username
-  ) {
-    this.consumerKey = consumerKey
-    this.consumerSecret = consumerSecret
-    this.accessTokenKey = accessTokenKey
-    this.accessTokenSecret = accessTokenSecret
-    this.username = username
   }
 }
