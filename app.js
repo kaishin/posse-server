@@ -158,7 +158,7 @@ function widegamut(post) {
   if (post.title !== undefined && post.title != "") {
     text = post.title + "\n" + post.id;
   } else {
-    text = post.excerpt + "\nRead more: " + post.id;
+    text = post.excerpt + "\n\n" + post.id;
   }
 
   return text
