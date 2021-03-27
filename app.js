@@ -165,7 +165,7 @@ function widegamut(post) {
 }
 
 function unredacted(post) {
-  return post.title + "\n" + post.url;
+  return "New blog post: " + post.title + "\n" + post.url;
 }
 
 function swiftUIDir(library) {
