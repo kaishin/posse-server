@@ -79,6 +79,7 @@ let processRequest = async (pipeline, req, res) => {
       res.send({ success: item.id }) 
     })
     .catch(error => {
+      console.error(error)
       res.status(200).send({ error: error })
     })
 }
