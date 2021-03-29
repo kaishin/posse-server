@@ -45,7 +45,10 @@ app.post('/unredacted', function(req, res) {
 let processRequest = async (pipeline, req, res) => {
   console.log("Requested at: " + new Date())
   console.log(req.headers)
- 
+
+  let ms = req.query.delay || 0
+  await delay(ms);
+
   if (pipeline.test) {
     axios.get(pipeline.feedURL)
     .then(response => {
@@ -177,4 +180,12 @@ function swiftUIDir(library) {
   return `${library.title}
   ${authorTwitter}: ${library.content_html.replace(/\r?\n|\r/gm, '')} #SwiftUI\n
   ${library.url}`
+}
+
+function delay(ms, val) {
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      resolve(val);
+    }, ms);
+  });
 }
