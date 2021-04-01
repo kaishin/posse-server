@@ -43,6 +43,7 @@ app.post('/unredacted', function(req, res) {
 })
 
 let processRequest = async (pipeline, req, res) => {
+  console.log("---")
   console.log("Requested at: " + new Date())
   console.log(req.headers)
 
@@ -174,12 +175,10 @@ function unredacted(post) {
 
 function swiftUIDir(library) {
   let authorTwitter = library.metadata.authorTwitter ? 
-  ' by @' + 
+  'by @' + 
   library.metadata.authorTwitter : '';
 
-  return `${library.title}
-  ${authorTwitter}: ${library.content_html.replace(/\r?\n|\r/gm, '')} #SwiftUI\n
-  ${library.url}`
+  return `${library.title} ${authorTwitter}: ${library.content_html.replace(/\r?\n|\r/gm, '')} #SwiftUI\n ${library.url}`
 }
 
 function delay(ms, val) {
