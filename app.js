@@ -67,20 +67,20 @@ let processRequest = async (pipeline, req, res) => {
           postBody = swiftUIDir(item)
           break
       }
-      
-      res.send({ dry: postBody }) 
+
+      res.send({ dry: postBody })
     })
 
     return
-  } 
+  }
 
   axios.get(pipeline.feedURL)
     .then(response => verifyItem(response.data, pipeline))
     .then(item => syndicateItem(item, pipeline))
     .then(item => cacheItem(item, pipeline))
-    .then(item => { 
+    .then(item => {
       console.log(`Successfully syndicated ${item.id}`)
-      res.send({ success: item.id }) 
+      res.send({ success: item.id })
     })
     .catch(error => {
       console.error(error)
@@ -94,7 +94,7 @@ let verifyItem = async (data, pipeline) => {
 
   const record = await pipeline.airtable(pipeline.airtableConfig.tableName)
   .find(pipeline.airtableConfig.recordID)
-  
+
   if (record.fields.ID == latestItem.id) {
     throw `Error 7002. No new content since ${latestItem.id}`
   } else {
@@ -174,11 +174,11 @@ function unredacted(post) {
 }
 
 function swiftUIDir(library) {
-  let authorTwitter = library.metadata.authorTwitter ? 
-  'by @' + 
+  let authorTwitter = library.metadata.authorTwitter ?
+  'by @' +
   library.metadata.authorTwitter : '';
 
-  return `${library.title} ${authorTwitter}: ${library.content_html.replace(/\r?\n|\r/gm, '')} #SwiftUI\n ${library.url}`
+  return `${library.title} ${authorTwitter}: ${library.content_html.replace(/\r?\n|\r/gm, '')} #SwiftUI\n${library.url}`
 }
 
 function delay(ms, val) {
